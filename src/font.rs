@@ -47,25 +47,62 @@ impl FontOpts {
 #[test]
 fn parse_font_head() {
     assert_eq!(
-      FontOpts::parse("flf2a$ 8 8 20 -1 6").unwrap(),
-      FontOpts {
-        hard_blank: '$',
-        height: 8,
-        baseline: 8,
-        max_length: 20,
-        old_layout: -1,
-        comment_lines: 6,
-        print_direction: 0,
-        full_layout: None,
-        codetag_count: None,
-      }
+        FontOpts::parse("flf2a$ 8 8 20 -1 6").unwrap(),
+        FontOpts {
+            hard_blank: '$',
+            height: 8,
+            baseline: 8,
+            max_length: 20,
+            old_layout: -1,
+            comment_lines: 6,
+            print_direction: 0,
+            full_layout: None,
+            codetag_count: None,
+        }
     );
 }
 
 struct Font {
+    name: String,
     font_head: FontOpts,
     meta_data: String,
-    chars: HashMap<u16, String>,
+    chars: HashMap<u16, Vec<String>>,
 }
 
-impl Font {}
+impl Font {
+    pub fn load_font() {
+        unimplemented!()
+    }
+
+    pub fn parse_font(name: &str, data: &str) -> Result<Font, std::num::ParseIntError> {
+        let ref mut lines = data.lines();
+
+        let font_head = FontOpts::parse(lines.next().unwrap())?;
+        let comment_lines = font_head.comment_lines;
+
+        let char_nums = (32..126)
+            .into_iter()
+            .chain(vec![196, 214, 220, 228, 246, 252, 223].into_iter());
+
+        let comment: String = lines.take(comment_lines).collect();
+
+        let line_vec: Vec<_> = lines
+            .map(|l| {
+                let last_char = &l[l.len()..];
+                l.replace(last_char, "")
+            })
+            .collect();
+
+        let fig_chars: Vec<Vec<_>> = line_vec.chunks(font_head.height).collect();
+
+        let fig_chars: HashMap<u16, Vec<String>> = char_nums.zip(fig_chars.into_iter()).collect();
+
+        Ok(Font {
+            name: String::from(name),
+            font_head,
+            meta_data: comment,
+            chars: fig_chars,
+        })
+
+    }
+}
