@@ -1,1 +1,1 @@
-mod font;
+pub mod font;

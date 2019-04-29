@@ -3,6 +3,9 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
+use std::path::PathBuf;
+use std::fs::File;
+use std::io::prelude::*;
 
 #[derive(Default, Debug, PartialEq, Eq)]
 struct FontOpts {
@@ -62,7 +65,8 @@ fn parse_font_head() {
     );
 }
 
-struct Font {
+#[derive(Debug)]
+pub struct Font {
     name: String,
     font_head: FontOpts,
     meta_data: String,
@@ -70,8 +74,12 @@ struct Font {
 }
 
 impl Font {
-    pub fn load_font() {
-        unimplemented!()
+    pub fn load_font(name: &str) -> Result<Font, std::num::ParseIntError> {
+        let file_name: PathBuf = [".", "fonts", name].iter().collect();
+        let mut file = File::open(file_name).unwrap();
+        let mut content = String::new();
+        file.read_to_string(&mut content).unwrap();
+        Font::parse_font(name, &content)
     }
 
     pub fn parse_font(name: &str, data: &str) -> Result<Font, std::num::ParseIntError> {
@@ -93,7 +101,7 @@ impl Font {
             })
             .collect();
 
-        let fig_chars: Vec<Vec<_>> = line_vec.chunks(font_head.height).collect();
+        let fig_chars: Vec<Vec<_>> = line_vec.chunks(font_head.height).map(|l| l.to_vec()).collect();
 
         let fig_chars: HashMap<u16, Vec<String>> = char_nums.zip(fig_chars.into_iter()).collect();
 
@@ -105,4 +113,10 @@ impl Font {
         })
 
     }
+}
+
+#[test]
+fn load_font() {
+    let f = Font::load_font("4Max.flf");
+    dbg!(f);
 }
