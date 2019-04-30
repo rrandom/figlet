@@ -1,11 +1,10 @@
-
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::fs::File;
 use std::io::prelude::*;
+use std::path::PathBuf;
 
 #[derive(Default, Debug, PartialEq, Eq)]
 struct FontOpts {
@@ -83,13 +82,12 @@ impl Font {
     }
 
     pub fn parse_font(name: &str, data: &str) -> Result<Font, std::num::ParseIntError> {
-        let ref mut lines = data.lines();
+        let lines = &mut data.lines();
 
         let font_head = FontOpts::parse(lines.next().unwrap())?;
         let comment_lines = font_head.comment_lines;
 
         let char_nums = (32..126)
-            .into_iter()
             .chain(vec![196, 214, 220, 228, 246, 252, 223].into_iter());
 
         let comment: String = lines.take(comment_lines).collect();
@@ -101,7 +99,10 @@ impl Font {
             })
             .collect();
 
-        let fig_chars: Vec<Vec<_>> = line_vec.chunks(font_head.height).map(|l| l.to_vec()).collect();
+        let fig_chars: Vec<Vec<_>> = line_vec
+            .chunks(font_head.height)
+            .map(|l| l.to_vec())
+            .collect();
 
         let fig_chars: HashMap<u16, Vec<String>> = char_nums.zip(fig_chars.into_iter()).collect();
 
@@ -111,7 +112,6 @@ impl Font {
             meta_data: comment,
             chars: fig_chars,
         })
-
     }
 }
 
