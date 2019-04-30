@@ -7,7 +7,7 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 #[derive(Default, Debug, PartialEq, Eq)]
-struct FontOpts {
+pub struct FontOpts {
     hard_blank: char,
     height: usize,
     baseline: usize,
@@ -66,10 +66,10 @@ fn parse_font_head() {
 
 #[derive(Debug)]
 pub struct Font {
-    name: String,
-    font_head: FontOpts,
-    meta_data: String,
-    chars: HashMap<u16, Vec<String>>,
+    pub name: String,
+    pub font_head: FontOpts,
+    pub meta_data: String,
+    pub chars: HashMap<u16, Vec<String>>,
 }
 
 impl Font {
@@ -85,16 +85,17 @@ impl Font {
         let lines = &mut data.lines();
 
         let font_head = FontOpts::parse(lines.next().unwrap())?;
-        let comment_lines = font_head.comment_lines;
 
-        let char_nums = (32..126)
-            .chain(vec![196, 214, 220, 228, 246, 252, 223].into_iter());
+        let char_nums = (32..126).chain(vec![196, 214, 220, 228, 246, 252, 223].into_iter());
 
-        let comment: String = lines.take(comment_lines).collect();
+        let comment: String = lines
+            .take(font_head.comment_lines)
+            .collect::<Vec<&str>>()
+            .join("\n");
 
         let line_vec: Vec<_> = lines
             .map(|l| {
-                let last_char = &l[l.len()..];
+                let last_char = &l[l.len() - 1..];
                 l.replace(last_char, "")
             })
             .collect();
