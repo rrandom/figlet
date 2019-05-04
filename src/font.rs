@@ -1,10 +1,12 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
+use crate::layout::*;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
+use strum::IntoEnumIterator;
 
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct FontOpts {
@@ -65,6 +67,14 @@ fn parse_font_head() {
 }
 
 #[derive(Debug)]
+struct Rules {
+    horizontal_layout: LayoutMode,
+    vertical_layout: LayoutMode,
+    horizontal_rules: Vec<SmushingRule>,
+    vertical_rules: Vec<SmushingRule>,
+}
+
+#[derive(Debug, Default)]
 pub struct Font {
     pub name: String,
     pub font_head: FontOpts,
@@ -114,10 +124,155 @@ impl Font {
             chars: fig_chars,
         })
     }
+
+    fn get_layout_rules(&self) -> Rules {
+        Font::get_layout(self.font_head.full_layout, self.font_head.old_layout)
+    }
+
+    fn get_layout(full_layout: Option<isize>, old_layout: isize) -> Rules {
+        let mut horizontal_rules = vec![];
+        let mut vertical_rules = vec![];
+        let mut horizontal_layout: Option<LayoutMode> = None;
+        let mut vertical_layout: Option<LayoutMode> = None;
+        let mut ly = full_layout.unwrap_or(old_layout);
+
+        let rules: Vec<_> = SmushingRule::iter().collect();
+        for code in rules.into_iter().rev() {
+            if ly >= code as isize {
+                ly -= code as isize;
+                match code.get_type() {
+                    LayoutType::Horizontal => {
+                        horizontal_rules.push(code);
+                        horizontal_layout = Some(code.get_mode());
+                    }
+                    LayoutType::Vertical => {
+                        vertical_rules.push(code);
+                        vertical_layout = Some(code.get_mode());
+                    }
+                }
+            }
+        }
+        if horizontal_layout.is_none() {
+            if old_layout == 0 {
+                horizontal_layout = Some(LayoutMode::Fitting);
+                vertical_rules.push(SmushingRule::HorizontalFitting);
+            } else if old_layout == -1 {
+                horizontal_layout = Some(LayoutMode::FullWidth);
+            }
+        } else {
+            let hl = horizontal_layout.as_ref().unwrap();
+            if *hl == LayoutMode::ControlledSmush {
+                horizontal_rules.retain(|r| *r != SmushingRule::HorizontalSmushing);
+            }
+        }
+
+        if vertical_layout.is_none() {
+            vertical_layout = Some(LayoutMode::FullWidth);
+        } else {
+            let vl = vertical_layout.as_ref().unwrap();
+            if *vl == LayoutMode::ControlledSmush {
+                vertical_rules.retain(|r| *r != SmushingRule::VerticalSmushing);
+            }
+        }
+
+        Rules {
+            horizontal_layout: horizontal_layout.unwrap(),
+            vertical_layout: vertical_layout.unwrap(),
+            horizontal_rules,
+            vertical_rules,
+        }
+    }
+
+    fn convert(&self, message: &str) {}
 }
 
 #[test]
+#[ignore]
 fn load_font() {
     let f = Font::load_font("4Max.flf");
     dbg!(f);
+}
+
+#[test]
+fn get_layout_full_width() {
+    let l = Font::get_layout(Some(0), -1);
+    assert_eq!(l.horizontal_layout, LayoutMode::FullWidth);
+    assert_eq!(l.vertical_layout, LayoutMode::FullWidth);
+    assert_eq!(l.horizontal_rules.len(), 0);
+    assert_eq!(l.vertical_rules.len(), 0);
+
+    let l = Font::get_layout(None, -1);
+    assert_eq!(l.horizontal_layout, LayoutMode::FullWidth);
+    assert_eq!(l.vertical_layout, LayoutMode::FullWidth);
+    assert_eq!(l.horizontal_rules.len(), 0);
+    assert_eq!(l.vertical_rules.len(), 0);
+}
+
+#[test]
+fn get_layout_kerning() {
+    let l = Font::get_layout(Some(64), 0);
+    assert_eq!(l.horizontal_layout, LayoutMode::Fitting);
+    assert_eq!(l.vertical_layout, LayoutMode::FullWidth);
+    assert_eq!(l.horizontal_rules.len(), 1);
+    assert_eq!(l.horizontal_rules.get(0).unwrap(), &SmushingRule::HorizontalFitting);
+    assert_eq!(l.vertical_rules.len(), 0);
+}
+
+#[test]
+fn get_layout_smushing() {
+    let l = Font::get_layout(Some(128), 0);
+    assert_eq!(l.horizontal_layout, LayoutMode::UniversalSmush);
+    assert_eq!(l.vertical_layout, LayoutMode::FullWidth);
+    assert_eq!(l.horizontal_rules.len(), 1);
+    assert_eq!(l.horizontal_rules.get(0).unwrap(), &SmushingRule::HorizontalSmushing);
+    assert_eq!(l.vertical_rules.len(), 0);
+}
+
+#[test]
+fn get_layout_controlled_smushing_slant() {
+    // slant.flf
+    let l = Font::get_layout(Some(18319), 15);
+    assert_eq!(l.horizontal_layout, LayoutMode::ControlledSmush);
+    assert_eq!(l.vertical_layout, LayoutMode::ControlledSmush);
+    assert_eq!(l.horizontal_rules.len(), 4);
+    assert_eq!(l.vertical_rules.len(), 3);
+
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalOppositePair));
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalHierarchy));
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalUnderscore));
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalEqualChar));
+
+    assert!(l.vertical_rules.contains(&SmushingRule::VerticalHierarchy));
+    assert!(l.vertical_rules.contains(&SmushingRule::VerticalUnderscore));
+    assert!(l.vertical_rules.contains(&SmushingRule::VerticalEqualChar));
+}
+
+#[test]
+fn get_layout_controlled_smushing_standard() {
+    // starndard.flf
+    let l = Font::get_layout(Some(24463), 15);
+    assert_eq!(l.horizontal_layout, LayoutMode::ControlledSmush);
+    assert_eq!(l.vertical_layout, LayoutMode::ControlledSmush);
+    assert_eq!(l.horizontal_rules.len(), 4);
+    assert_eq!(l.vertical_rules.len(), 5);
+
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalOppositePair));
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalHierarchy));
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalUnderscore));
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalEqualChar));
+
+    assert!(l.vertical_rules.contains(&SmushingRule::VerticalVerticalLine));
+    assert!(l.vertical_rules.contains(&SmushingRule::VerticalHierarchy));
+    assert!(l.vertical_rules.contains(&SmushingRule::VerticalUnderscore));
+    assert!(l.vertical_rules.contains(&SmushingRule::VerticalEqualChar));
+
+    let l = Font::get_layout(None, 15);
+    assert_eq!(l.horizontal_layout, LayoutMode::ControlledSmush);
+    assert_eq!(l.horizontal_rules.len(), 4);
+    assert_eq!(l.vertical_layout, LayoutMode::FullWidth);
+
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalOppositePair));
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalHierarchy));
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalUnderscore));
+    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalEqualChar));
 }
