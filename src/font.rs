@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 
 use crate::layout::*;
+use crate::rules::*;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
@@ -10,7 +11,7 @@ use strum::IntoEnumIterator;
 
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct FontOpts {
-    hard_blank: char,
+    hardblank: char,
     height: usize,
     baseline: usize,
     max_length: usize,
@@ -35,7 +36,7 @@ impl FontOpts {
         let codetag_count = head.next().and_then(|cc| cc.parse::<usize>().ok());
 
         Ok(FontOpts {
-            hard_blank: signature.chars().last().unwrap(),
+            hardblank: signature.chars().last().unwrap(),
             height,
             baseline,
             max_length,
@@ -53,7 +54,7 @@ fn parse_font_head() {
     assert_eq!(
         FontOpts::parse("flf2a$ 8 8 20 -1 6").unwrap(),
         FontOpts {
-            hard_blank: '$',
+            hardblank: '$',
             height: 8,
             baseline: 8,
             max_length: 20,
@@ -64,14 +65,6 @@ fn parse_font_head() {
             codetag_count: None,
         }
     );
-}
-
-#[derive(Debug)]
-struct Rules {
-    horizontal_layout: LayoutMode,
-    vertical_layout: LayoutMode,
-    horizontal_rules: Vec<SmushingRule>,
-    vertical_rules: Vec<SmushingRule>,
 }
 
 #[derive(Debug, Default)]
@@ -214,7 +207,10 @@ fn get_layout_kerning() {
     assert_eq!(l.horizontal_layout, LayoutMode::Fitting);
     assert_eq!(l.vertical_layout, LayoutMode::FullWidth);
     assert_eq!(l.horizontal_rules.len(), 1);
-    assert_eq!(l.horizontal_rules.get(0).unwrap(), &SmushingRule::HorizontalFitting);
+    assert_eq!(
+        l.horizontal_rules.get(0).unwrap(),
+        &SmushingRule::HorizontalFitting
+    );
     assert_eq!(l.vertical_rules.len(), 0);
 }
 
@@ -224,7 +220,10 @@ fn get_layout_smushing() {
     assert_eq!(l.horizontal_layout, LayoutMode::UniversalSmush);
     assert_eq!(l.vertical_layout, LayoutMode::FullWidth);
     assert_eq!(l.horizontal_rules.len(), 1);
-    assert_eq!(l.horizontal_rules.get(0).unwrap(), &SmushingRule::HorizontalSmushing);
+    assert_eq!(
+        l.horizontal_rules.get(0).unwrap(),
+        &SmushingRule::HorizontalSmushing
+    );
     assert_eq!(l.vertical_rules.len(), 0);
 }
 
@@ -237,10 +236,18 @@ fn get_layout_controlled_smushing_slant() {
     assert_eq!(l.horizontal_rules.len(), 4);
     assert_eq!(l.vertical_rules.len(), 3);
 
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalOppositePair));
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalHierarchy));
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalUnderscore));
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalEqualChar));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalOppositePair));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalHierarchy));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalUnderscore));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalEqualChar));
 
     assert!(l.vertical_rules.contains(&SmushingRule::VerticalHierarchy));
     assert!(l.vertical_rules.contains(&SmushingRule::VerticalUnderscore));
@@ -256,12 +263,22 @@ fn get_layout_controlled_smushing_standard() {
     assert_eq!(l.horizontal_rules.len(), 4);
     assert_eq!(l.vertical_rules.len(), 5);
 
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalOppositePair));
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalHierarchy));
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalUnderscore));
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalEqualChar));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalOppositePair));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalHierarchy));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalUnderscore));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalEqualChar));
 
-    assert!(l.vertical_rules.contains(&SmushingRule::VerticalVerticalLine));
+    assert!(l
+        .vertical_rules
+        .contains(&SmushingRule::VerticalVerticalLine));
     assert!(l.vertical_rules.contains(&SmushingRule::VerticalHierarchy));
     assert!(l.vertical_rules.contains(&SmushingRule::VerticalUnderscore));
     assert!(l.vertical_rules.contains(&SmushingRule::VerticalEqualChar));
@@ -271,8 +288,16 @@ fn get_layout_controlled_smushing_standard() {
     assert_eq!(l.horizontal_rules.len(), 4);
     assert_eq!(l.vertical_layout, LayoutMode::FullWidth);
 
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalOppositePair));
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalHierarchy));
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalUnderscore));
-    assert!(l.horizontal_rules.contains(&SmushingRule::HorizontalEqualChar));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalOppositePair));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalHierarchy));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalUnderscore));
+    assert!(l
+        .horizontal_rules
+        .contains(&SmushingRule::HorizontalEqualChar));
 }
