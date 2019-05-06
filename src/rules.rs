@@ -34,3 +34,14 @@ impl Rules {
         None
     }
 }
+
+impl Default for Rules {
+    fn default() -> Self {
+        Rules {
+            horizontal_layout: LayoutMode::FullWidth,
+            vertical_layout: LayoutMode::FullWidth,
+            horizontal_rules: vec![],
+            vertical_rules: vec![],
+        }
+    }
+}

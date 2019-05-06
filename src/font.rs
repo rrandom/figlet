@@ -73,10 +73,11 @@ pub struct Font {
     pub font_head: FontOpts,
     pub meta_data: String,
     pub chars: HashMap<u16, Vec<String>>,
+    rules: Rules,
 }
 
 impl Font {
-    pub fn load_font(name: &str) -> Result<Font, std::num::ParseIntError> {
+    pub fn load_font(name: &str) -> Result<Self, std::num::ParseIntError> {
         let file_name: PathBuf = [".", "fonts", name].iter().collect();
         let mut file = File::open(file_name).unwrap();
         let mut content = String::new();
@@ -84,7 +85,7 @@ impl Font {
         Font::parse_font(name, &content)
     }
 
-    pub fn parse_font(name: &str, data: &str) -> Result<Font, std::num::ParseIntError> {
+    pub fn parse_font(name: &str, data: &str) -> Result<Self, std::num::ParseIntError> {
         let lines = &mut data.lines();
 
         let font_head = FontOpts::parse(lines.next().unwrap())?;
@@ -110,11 +111,14 @@ impl Font {
 
         let fig_chars: HashMap<u16, Vec<String>> = char_nums.zip(fig_chars.into_iter()).collect();
 
+        let rules = Font::get_layout(font_head.full_layout, font_head.old_layout);
+
         Ok(Font {
             name: String::from(name),
             font_head,
             meta_data: comment,
             chars: fig_chars,
+            rules,
         })
     }
 
@@ -176,14 +180,47 @@ impl Font {
         }
     }
 
-    fn convert(&self, message: &str) {}
+    fn convert(&self, message: &str) -> Vec<Vec<char>> {
+        let mut result = vec![vec![' '; 10]; self.font_head.height];
+        // dbg!(&result);
+        for c in message.chars() {
+            let figchar = self.chars.get(&(c as u32 as u16)).unwrap();
+            dbg!(&figchar);
+            self.calc_overlay(&result, figchar);
+            let result = self.add_char(&mut result, figchar);
+        }
+        result
+    }
+
+    fn add_char(&self, mut chars: &Vec<Vec<char>>, figchar: &Vec<String>) {}
+
+    fn calc_overlay(&self, chars: &[Vec<char>], figchar: &[String]) -> u32 {
+        assert_eq!(chars.len(), figchar.len());
+        if self.rules.horizontal_layout == LayoutMode::FullWidth {
+            return 0;
+        }
+        let max_overlay = self.font_head.max_length as u32;
+
+        for (cs, fs) in chars.iter().zip(figchar.iter()) {
+            dbg!(&cs);
+            let emptys = fs.chars().take_while(|c| *c == ' ');
+            dbg!(&fs);
+            dbg!(emptys.count());
+        }
+
+        // for (index, cs) in chars.iter().enumerate() {
+        //     dbg!(&cs);
+        // }
+
+        max_overlay
+    }
 }
 
 #[test]
-#[ignore]
 fn load_font() {
     let f = Font::load_font("4Max.flf");
-    dbg!(f);
+    // dbg!(&f);
+    f.unwrap().convert("ok");
 }
 
 #[test]
