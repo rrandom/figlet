@@ -181,37 +181,58 @@ impl Font {
     }
 
     fn convert(&self, message: &str) -> Vec<Vec<char>> {
-        let mut result = vec![vec![' '; 10]; self.font_head.height];
+        let mut result = vec![vec![' '; 0]; self.font_head.height];
         // dbg!(&result);
         for c in message.chars() {
             let figchar = self.chars.get(&(c as u32 as u16)).unwrap();
-            dbg!(&figchar);
-            self.calc_overlay(&result, figchar);
-            let result = self.add_char(&mut result, figchar);
+            // dbg!(&figchar);
+            // self.calc_overlay(&result, figchar);
+            self.add_char(&mut result, figchar);
         }
         result
     }
 
-    fn add_char(&self, mut chars: &Vec<Vec<char>>, figchar: &Vec<String>) {}
+    fn add_char(&self, chars: &mut Vec<Vec<char>>, figchar: &Vec<String>) {
+        let overlay = self.calc_overlay(chars, figchar) as usize;
+        dbg!(&overlay);
+        for (cs1, cs2) in chars.iter_mut().zip(figchar.to_owned().iter_mut()) {
+            let cs1l = cs1.len();
+            let cs2l = cs2.len();
+            let mut cs2 = cs2.chars();
+            for k in 0..=overlay {
+                let col = cs1l - overlay + k;
+                let c2 = cs2.nth(k).unwrap();
+                let c1 = cs1[col];
+                let smushed = self.rules.smush_horizontal(c1, c2, self.font_head.hardblank).unwrap();
+                dbg!(&smushed);
+                cs1[col] = smushed;
+            }
+        }
+    }
 
     fn calc_overlay(&self, chars: &[Vec<char>], figchar: &[String]) -> u32 {
         assert_eq!(chars.len(), figchar.len());
         if self.rules.horizontal_layout == LayoutMode::FullWidth {
             return 0;
         }
-        let max_overlay = self.font_head.max_length as u32;
+        let mut max_overlay = self.font_head.max_length as u32;
 
         for (cs, fs) in chars.iter().zip(figchar.iter()) {
-            dbg!(&cs);
-            let emptys = fs.chars().take_while(|c| *c == ' ');
-            dbg!(&fs);
-            dbg!(emptys.count());
+            // dbg!(&cs);
+            // dbg!(&fs);
+            let emptys1 = cs.iter().rev().take_while(|c| **c == ' ').count();
+            let emptys2 = fs.chars().take_while(|c| *c == ' ').count();
+
+            let mut overlay: u32 = emptys1 as u32 + emptys2 as u32;
+            if emptys1 < cs.len() && emptys2 < fs.len() {
+                if self.rules.horizontal_layout == LayoutMode::UniversalSmush && SmushingRule::HorizontalSmushing.smush(cs[cs.len() - 1 - emptys1], fs.chars().nth(emptys2).unwrap(), self.font_head.hardblank).is_some() || self.rules.smushes_horizontal(cs[cs.len() - 1 - emptys1], fs.chars().nth(emptys2).unwrap(), self.font_head.hardblank) {
+                    overlay += 1;
+                }
+            }
+            if overlay < max_overlay {
+                max_overlay = overlay;
+            }
         }
-
-        // for (index, cs) in chars.iter().enumerate() {
-        //     dbg!(&cs);
-        // }
-
         max_overlay
     }
 }
