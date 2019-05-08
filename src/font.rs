@@ -180,26 +180,23 @@ impl Font {
         }
     }
 
-    fn convert(&self, message: &str) -> Vec<Vec<char>> {
+    fn convert(&self, message: &str) -> Vec<String> {
         let mut result = vec![vec![' '; 0]; self.font_head.height];
-        // dbg!(&result);
         for c in message.chars() {
             let figchar = self.chars.get(&(c as u32 as u16)).unwrap();
-            // dbg!(&figchar);
-            // self.calc_overlay(&result, figchar);
             self.add_char(&mut result, figchar);
         }
-        result
+        result.into_iter().map(|row| row.into_iter().collect()).collect()
     }
 
     fn add_char(&self, chars: &mut Vec<Vec<char>>, figchar: &Vec<String>) {
         let overlay = self.calc_overlay(chars, figchar) as usize;
-        dbg!(&overlay);
         for (cs1, cs2) in chars.iter_mut().zip(figchar.to_owned().iter_mut()) {
             let cs1l = cs1.len();
             let cs2l = cs2.len();
             let mut cs2 = cs2.chars();
-            for k in 0..=overlay {
+            for k in 0..overlay {
+                dbg!(&k);
                 let col = cs1l - overlay + k;
                 let c2 = cs2.nth(k).unwrap();
                 let c1 = cs1[col];
@@ -207,6 +204,7 @@ impl Font {
                 dbg!(&smushed);
                 cs1[col] = smushed;
             }
+            cs1.extend_from_slice(&(cs2.collect::<Vec<_>>()))
         }
     }
 
@@ -241,7 +239,8 @@ impl Font {
 fn load_font() {
     let f = Font::load_font("4Max.flf");
     // dbg!(&f);
-    f.unwrap().convert("ok");
+    let result = f.unwrap().convert("ok");
+    dbg!(&result);
 }
 
 #[test]
