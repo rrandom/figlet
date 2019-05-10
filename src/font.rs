@@ -9,7 +9,7 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 use strum::IntoEnumIterator;
 
-#[derive(Default, Debug, PartialEq, Eq)]
+#[derive(Default, Debug)]
 pub struct FontOpts {
     hardblank: char,
     height: usize,
@@ -51,20 +51,16 @@ impl FontOpts {
 
 #[test]
 fn parse_font_head() {
-    assert_eq!(
-        FontOpts::parse("flf2a$ 8 8 20 -1 6").unwrap(),
-        FontOpts {
-            hardblank: '$',
-            height: 8,
-            baseline: 8,
-            max_length: 20,
-            old_layout: -1,
-            comment_lines: 6,
-            print_direction: 0,
-            full_layout: None,
-            codetag_count: None,
-        }
-    );
+    let fo = FontOpts::parse("flf2a$ 8 8 20 -1 6").unwrap();
+    assert_eq!(fo.hardblank, '$');
+    assert_eq!(fo.height, 8);
+    assert_eq!(fo.baseline, 8);
+    assert_eq!(fo.max_length, 20);
+    assert_eq!(fo.old_layout, -1);
+    assert_eq!(fo.comment_lines, 6);
+    assert_eq!(fo.print_direction, 0);
+    assert_eq!(fo.full_layout, None);
+    assert_eq!(fo.codetag_count, None);
 }
 
 #[derive(Debug, Default)]
@@ -186,7 +182,10 @@ impl Font {
             let figchar = self.chars.get(&(c as u32 as u16)).unwrap();
             self.add_char(&mut result, figchar);
         }
-        result.into_iter().map(|row| row.into_iter().collect()).collect()
+        result
+            .into_iter()
+            .map(|row| row.into_iter().collect())
+            .collect()
     }
 
     fn add_char(&self, chars: &mut Vec<Vec<char>>, figchar: &Vec<String>) {
@@ -200,7 +199,10 @@ impl Font {
                 let col = cs1l - overlay + k;
                 let c2 = cs2.nth(k).unwrap();
                 let c1 = cs1[col];
-                let smushed = self.rules.smush_horizontal(c1, c2, self.font_head.hardblank).unwrap();
+                let smushed = self
+                    .rules
+                    .smush_horizontal(c1, c2, self.font_head.hardblank)
+                    .unwrap();
                 dbg!(&smushed);
                 cs1[col] = smushed;
             }
@@ -223,7 +225,20 @@ impl Font {
 
             let mut overlay: u32 = emptys1 as u32 + emptys2 as u32;
             if emptys1 < cs.len() && emptys2 < fs.len() {
-                if self.rules.horizontal_layout == LayoutMode::UniversalSmush && SmushingRule::HorizontalSmushing.smush(cs[cs.len() - 1 - emptys1], fs.chars().nth(emptys2).unwrap(), self.font_head.hardblank).is_some() || self.rules.smushes_horizontal(cs[cs.len() - 1 - emptys1], fs.chars().nth(emptys2).unwrap(), self.font_head.hardblank) {
+                if self.rules.horizontal_layout == LayoutMode::UniversalSmush
+                    && SmushingRule::HorizontalSmushing
+                        .smush(
+                            cs[cs.len() - 1 - emptys1],
+                            fs.chars().nth(emptys2).unwrap(),
+                            self.font_head.hardblank,
+                        )
+                        .is_some()
+                    || self.rules.smushes_horizontal(
+                        cs[cs.len() - 1 - emptys1],
+                        fs.chars().nth(emptys2).unwrap(),
+                        self.font_head.hardblank,
+                    )
+                {
                     overlay += 1;
                 }
             }
