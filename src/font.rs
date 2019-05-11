@@ -1,6 +1,3 @@
-#![allow(unused_variables)]
-#![allow(dead_code)]
-
 use crate::layout::*;
 use crate::rules::*;
 use std::collections::HashMap;
@@ -115,10 +112,6 @@ impl Font {
         })
     }
 
-    fn get_layout_rules(&self) -> Rules {
-        Font::get_layout(self.font_head.full_layout, self.font_head.old_layout)
-    }
-
     fn get_layout(full_layout: Option<isize>, old_layout: isize) -> Rules {
         let mut horizontal_rules = vec![];
         let mut vertical_rules = vec![];
@@ -173,7 +166,7 @@ impl Font {
         }
     }
 
-    fn convert(&self, message: &str) -> Vec<String> {
+    pub fn convert(&self, message: &str) -> Vec<String> {
         let mut result = vec![vec![' '; 0]; self.font_head.height];
         for c in message.chars() {
             let figchar = self.chars.get(&(c as u32 as u16)).unwrap();
@@ -189,7 +182,6 @@ impl Font {
         let overlay = self.calc_overlay(chars, figchar) as usize;
         for (cs1, cs2) in chars.iter_mut().zip(figchar.to_owned().iter_mut()) {
             let cs1l = cs1.len();
-            let cs2l = cs2.len();
             for k in 0..overlay {
                 dbg!(&k);
                 let col = cs1l - overlay + k;
@@ -218,8 +210,9 @@ impl Font {
             let emptys2 = fs.iter().take_while(|c| **c == ' ').count();
 
             let mut overlay: u32 = emptys1 as u32 + emptys2 as u32;
-            if emptys1 < cs.len() && emptys2 < fs.len() {
-                if self.rules.horizontal_layout == LayoutMode::UniversalSmush
+            if emptys1 < cs.len()
+                && emptys2 < fs.len()
+                && (self.rules.horizontal_layout == LayoutMode::UniversalSmush
                     && SmushingRule::HorizontalSmushing
                         .smush(
                             cs[cs.len() - 1 - emptys1],
@@ -231,11 +224,11 @@ impl Font {
                         cs[cs.len() - 1 - emptys1],
                         fs[emptys2],
                         self.font_head.hardblank,
-                    )
-                {
-                    overlay += 1;
-                }
+                    ))
+            {
+                overlay += 1;
             }
+
             if overlay < max_overlay {
                 max_overlay = overlay;
             }
