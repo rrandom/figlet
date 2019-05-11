@@ -68,7 +68,7 @@ pub struct Font {
     pub name: String,
     pub font_head: FontOpts,
     pub meta_data: String,
-    pub chars: HashMap<u16, Vec<String>>,
+    pub chars: HashMap<u16, Vec<Vec<char>>>,
     rules: Rules,
 }
 
@@ -96,16 +96,13 @@ impl Font {
         let line_vec: Vec<_> = lines
             .map(|l| {
                 let last_char = &l[l.len() - 1..];
-                l.replace(last_char, "")
+                l.replace(last_char, "").chars().collect::<Vec<_>>()
             })
             .collect();
 
-        let fig_chars: Vec<Vec<_>> = line_vec
-            .chunks(font_head.height)
-            .map(|l| l.to_vec())
+        let fig_chars: HashMap<u16, Vec<_>> = char_nums
+            .zip(line_vec.chunks(font_head.height).map(|l| l.to_vec()))
             .collect();
-
-        let fig_chars: HashMap<u16, Vec<String>> = char_nums.zip(fig_chars.into_iter()).collect();
 
         let rules = Font::get_layout(font_head.full_layout, font_head.old_layout);
 
@@ -188,17 +185,16 @@ impl Font {
             .collect()
     }
 
-    fn add_char(&self, chars: &mut Vec<Vec<char>>, figchar: &Vec<String>) {
+    fn add_char(&self, chars: &mut Vec<Vec<char>>, figchar: &[Vec<char>]) {
         let overlay = self.calc_overlay(chars, figchar) as usize;
         for (cs1, cs2) in chars.iter_mut().zip(figchar.to_owned().iter_mut()) {
             let cs1l = cs1.len();
             let cs2l = cs2.len();
-            let mut cs2 = cs2.chars();
             for k in 0..overlay {
                 dbg!(&k);
                 let col = cs1l - overlay + k;
-                let c2 = cs2.nth(k).unwrap();
                 let c1 = cs1[col];
+                let c2 = cs2[k];
                 let smushed = self
                     .rules
                     .smush_horizontal(c1, c2, self.font_head.hardblank)
@@ -206,11 +202,11 @@ impl Font {
                 dbg!(&smushed);
                 cs1[col] = smushed;
             }
-            cs1.extend_from_slice(&(cs2.collect::<Vec<_>>()))
+            cs1.extend_from_slice(&cs2)
         }
     }
 
-    fn calc_overlay(&self, chars: &[Vec<char>], figchar: &[String]) -> u32 {
+    fn calc_overlay(&self, chars: &[Vec<char>], figchar: &[Vec<char>]) -> u32 {
         assert_eq!(chars.len(), figchar.len());
         if self.rules.horizontal_layout == LayoutMode::FullWidth {
             return 0;
@@ -218,10 +214,8 @@ impl Font {
         let mut max_overlay = self.font_head.max_length as u32;
 
         for (cs, fs) in chars.iter().zip(figchar.iter()) {
-            // dbg!(&cs);
-            // dbg!(&fs);
             let emptys1 = cs.iter().rev().take_while(|c| **c == ' ').count();
-            let emptys2 = fs.chars().take_while(|c| *c == ' ').count();
+            let emptys2 = fs.iter().take_while(|c| **c == ' ').count();
 
             let mut overlay: u32 = emptys1 as u32 + emptys2 as u32;
             if emptys1 < cs.len() && emptys2 < fs.len() {
@@ -229,13 +223,13 @@ impl Font {
                     && SmushingRule::HorizontalSmushing
                         .smush(
                             cs[cs.len() - 1 - emptys1],
-                            fs.chars().nth(emptys2).unwrap(),
+                            fs[emptys2],
                             self.font_head.hardblank,
                         )
                         .is_some()
                     || self.rules.smushes_horizontal(
                         cs[cs.len() - 1 - emptys1],
-                        fs.chars().nth(emptys2).unwrap(),
+                        fs[emptys2],
                         self.font_head.hardblank,
                     )
                 {
