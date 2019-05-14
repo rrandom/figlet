@@ -183,7 +183,7 @@ impl Font {
         for (cs1, cs2) in chars.iter_mut().zip(figchar.to_owned().iter_mut()) {
             let cs1l = cs1.len();
             for k in 0..overlay {
-                dbg!(&k);
+                // dbg!(&k);
                 let col = cs1l - overlay + k;
                 let c1 = cs1[col];
                 let c2 = cs2[k];
@@ -191,7 +191,7 @@ impl Font {
                     .rules
                     .smush_horizontal(c1, c2, self.font_head.hardblank)
                     .unwrap();
-                dbg!(&smushed);
+                // dbg!(&smushed);
                 cs1[col] = smushed;
             }
             cs1.extend_from_slice(&cs2)
@@ -203,7 +203,8 @@ impl Font {
         if self.rules.horizontal_layout == LayoutMode::FullWidth {
             return 0;
         }
-        let mut max_overlay = self.font_head.max_length as u32;
+
+        let mut max_overlay = chars[0].len() as u32;
 
         for (cs, fs) in chars.iter().zip(figchar.iter()) {
             let emptys1 = cs.iter().rev().take_while(|c| **c == ' ').count();
@@ -239,9 +240,9 @@ impl Font {
 
 #[test]
 fn load_font() {
-    let f = Font::load_font("4Max.flf");
+    let f = Font::load_font("standard.flf");
     // dbg!(&f);
-    let result = f.unwrap().convert("ok");
+    let result = f.unwrap().convert("figlet");
     dbg!(&result);
 }
 
