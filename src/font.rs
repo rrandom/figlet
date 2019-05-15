@@ -166,7 +166,7 @@ impl Font {
         }
     }
 
-    pub fn convert(&self, message: &str) -> Vec<String> {
+    pub fn convert(&self, message: &str) -> String {
         let mut result = vec![vec![' '; 0]; self.font_head.height];
         for c in message.chars() {
             let figchar = self.chars.get(&(c as u32 as u16)).unwrap();
@@ -174,16 +174,17 @@ impl Font {
         }
         result
             .into_iter()
-            .map(|row| row.into_iter().collect())
-            .collect()
+            .map(|row| row.into_iter().collect::<String>())
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     fn add_char(&self, chars: &mut Vec<Vec<char>>, figchar: &[Vec<char>]) {
         let overlay = self.calc_overlay(chars, figchar) as usize;
         for (cs1, cs2) in chars.iter_mut().zip(figchar.to_owned().iter_mut()) {
             let cs1l = cs1.len();
+            let _cs2l = cs2.len();
             for k in 0..overlay {
-                // dbg!(&k);
                 let col = cs1l - overlay + k;
                 let c1 = cs1[col];
                 let c2 = cs2[k];
@@ -191,10 +192,9 @@ impl Font {
                     .rules
                     .smush_horizontal(c1, c2, self.font_head.hardblank)
                     .unwrap();
-                // dbg!(&smushed);
                 cs1[col] = smushed;
             }
-            cs1.extend_from_slice(&cs2)
+            cs1.extend_from_slice(&cs2[overlay..]);
         }
     }
 
@@ -239,11 +239,11 @@ impl Font {
 }
 
 #[test]
-fn load_font() {
-    let f = Font::load_font("standard.flf");
-    // dbg!(&f);
-    let result = f.unwrap().convert("figlet");
-    dbg!(&result);
+fn basic_convert() {
+    let f = Font::load_font("standard.flf").unwrap();
+    // dbg!(&f.rules);
+    let result = f.convert("FIGlet");
+    println!("{}", &result);
 }
 
 #[test]
