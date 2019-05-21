@@ -169,7 +169,7 @@ impl Font {
     pub fn convert(&self, message: &str) -> String {
         let mut result = vec![vec![' '; 0]; self.font_head.height];
         for c in message.chars() {
-            let figchar = self.chars.get(&(c as u32 as u16)).unwrap();
+            let figchar = self.chars.get(&(c as u16)).unwrap();
             self.add_char(&mut result, figchar);
         }
         result
@@ -242,7 +242,7 @@ impl Font {
 fn basic_convert() {
     let f = Font::load_font("standard.flf").unwrap();
     // dbg!(&f.rules);
-    let result = f.convert("FIGlet");
+    let result = f.convert("FIGlet abcdefg");
     println!("{}", &result);
 }
 

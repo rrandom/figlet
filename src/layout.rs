@@ -112,6 +112,49 @@ impl SmushingRule {
                     None
                 }
             }
+            SmushingRule::VerticalEqualChar => {
+                if char1 == char2 && char1 != hardblank {
+                    Some(char1)
+                } else {
+                    None
+                }
+            }
+            SmushingRule::VerticalUnderscore => {
+                let chars = "|/\\[]{}()<>";
+                if char1 == '_' && chars.contains(char2) {
+                    Some(char2)
+                } else if char2 == '_' && chars.contains(char1) {
+                    Some(char1)
+                } else {
+                    None
+                }
+            }
+            SmushingRule::VerticalHierarchy => {
+                let classes = "| /\\ [] {} () <>";
+                let pos1 = classes.find(char1);
+                let pos2 = classes.find(char2);
+                if pos1.is_some() && pos2.is_some() {
+                    let pos1 = pos1.unwrap();
+                    let pos2 = pos2.unwrap();
+                    if pos1 != pos2 && (pos1 as i64 - pos2 as i64).abs() != 1 {
+                        let max_pos = pos1.max(pos2);
+                        return char::from_str(&classes[max_pos..=max_pos]).ok();
+                    }
+                }
+                None
+            }
+            SmushingRule::VerticalHorizontalLine => {
+                if char1 == '-' && char2 == '_' || char1 == '_' && char2 == '-' {
+                    return Some('=');
+                }
+                None
+            }
+            SmushingRule::VerticalVerticalLine => {
+                if char1 == '|' && char2 == '|' {
+                    return Some('|');
+                }
+                None
+            }
             _ => None,
         }
     }
